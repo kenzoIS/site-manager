@@ -1,42 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BayaniHub — Site Manager Dashboard
+
+Internal dashboard for BayaniHub site managers to monitor volunteer deployments, review applications, manage donation inventory, and activate mission sessions.
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Front-End | React (Next.js) · TypeScript |
+| Back-End | Node.js (NestJS) · TypeScript |
+| Mobile | React Native |
+| Database | Supabase (PostgreSQL) · Supabase Storage · Supabase Auth |
+
+## Project Structure
+
+```
+/                        # Next.js frontend (React + TypeScript)
+├── src/
+│   ├── app/             # Pages (App Router)
+│   │   ├── page.tsx                          # Dashboard
+│   │   ├── donor-applicants/                 # Donor applicant list
+│   │   ├── volunteer-applications/           # Application queue + review
+│   │   ├── donation-inventory/               # Donation inventory
+│   │   ├── activate-mission/                 # Mission activation
+│   │   └── volunteer-summary/                # Real-time volunteer summary
+│   ├── components/      # Shared UI components
+│   └── lib/
+│       ├── api.ts        # Typed fetch client for all backend endpoints
+│       └── supabase.ts   # Browser-side Supabase client
+backend/                 # NestJS API server (Node.js + TypeScript)
+├── src/
+│   ├── campaigns/
+│   ├── donations/
+│   ├── missions/
+│   ├── supabase/        # Global Supabase service (service-role key)
+│   ├── user-profiles/
+│   ├── volunteer-applications/
+│   └── volunteer-roles/
+```
 
 ## Getting Started
 
-Open 2 terminals one for the frontend and one for the backend
+### Prerequisites
 
-Terminal 1 - Backend
+- Node.js 18+
+- A Supabase project with the BayaniHub schema
+
+### Environment Variables
+
+Copy these two files and fill in your credentials:
+
+**`.env.local`** (frontend)
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+```
+
+**`backend/.env`** (NestJS)
+```
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+PORT=3001
+CORS_ORIGIN=http://localhost:3000
+FB_PAGE_ACCESS_TOKEN=
+JWT_SECRET=
+```
+
+### Running Locally
+
+Open two terminals:
+
+**Terminal 1 — Backend (NestJS)**
+```bash
 cd backend
-source venv/Scripts/activate
-python app.py
+npm install
+npm run start:dev
 ```
+Runs at `http://localhost:3001`
 
-Wait until you see:
+**Terminal 2 — Frontend (Next.js)**
+```bash
+npm install
+npm run dev
 ```
-Connected! Running at: http://localhost:5000
+Runs at `http://localhost:3000`
 
-Terminal 2 - Frontend
-cd frontend
-npm start
+## Features
 
-
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Donor Applicant List** — Browse and search donor profiles
+- **Volunteer Application Queue** — Filter by role/status, review uploaded documents
+- **Document Review Workflow** — Approve or reject documents with Facebook Messenger notifications
+- **Donation Inventory** — View donations grouped by campaign
+- **Activate Mission** — Deploy approved volunteers to an operation
+- **Real-time Volunteer Summary** — Live deployment stats and team breakdown
