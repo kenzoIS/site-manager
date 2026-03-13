@@ -20,9 +20,8 @@ import {
   MessageSquare,
   ThumbsUp,
   ThumbsDown,
-  Facebook,
 } from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
@@ -30,7 +29,6 @@ const STEP_LABELS = ['Review Details', 'Verify Documents', 'Make Decision'];
 
 export default function ApplicationReviewPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
 
   const [application, setApplication] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +40,6 @@ export default function ApplicationReviewPage() {
   const [showRejectDocsModal, setShowRejectDocsModal] = useState(false);
   const [showRejectAppModal, setShowRejectAppModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-  const [facebookPsid, setFacebookPsid] = useState('');
 
   const loadApplication = useCallback(async () => {
     setLoading(true);
@@ -85,11 +82,10 @@ export default function ApplicationReviewPage() {
     if (!rejectReason.trim()) return;
     setActionLoading(true);
     try {
-      await VolunteerApplicationsAPI.rejectDocuments(id, rejectReason, facebookPsid || undefined);
-      notify('success', `Documents rejected. ${facebookPsid ? 'Facebook notification sent.' : 'No FB notification (PSID not provided).'}`);
+      await VolunteerApplicationsAPI.rejectDocuments(id, rejectReason);
+      notify('success', 'Documents rejected.');
       setShowRejectDocsModal(false);
       setRejectReason('');
-      setFacebookPsid('');
       loadApplication();
     } catch (e: any) {
       notify('error', e.message);
@@ -465,7 +461,7 @@ export default function ApplicationReviewPage() {
                           fontSize: '14px', fontWeight: 600, opacity: actionLoading ? 0.7 : 1,
                         }}
                       >
-                        <ThumbsDown size={16} /> No — Reject & Notify via FB
+                        <ThumbsDown size={16} /> No — Reject Documents
                       </button>
                     </div>
                   </div>
@@ -551,7 +547,7 @@ export default function ApplicationReviewPage() {
                 </div>
                 {application.status === 'documents_rejected' && (
                   <p style={{ fontSize: '13px', color: 'var(--color-gray-500)', marginTop: '8px' }}>
-                    User has been notified. They may resubmit with valid documents.
+                    The applicant may resubmit with valid documents.
                   </p>
                 )}
               </div>
@@ -571,7 +567,7 @@ export default function ApplicationReviewPage() {
               <ThumbsDown size={18} color="#EF4444" /> Reject Documents
             </h3>
             <p style={{ fontSize: '14px', color: 'var(--color-gray-500)', marginBottom: '20px' }}>
-              Provide a reason. If you enter the applicant's Facebook PSID, a Messenger notification will be sent automatically.
+              Provide a reason for rejecting the submitted documents.
             </p>
 
             <div style={{ marginBottom: '14px' }}>
@@ -592,25 +588,6 @@ export default function ApplicationReviewPage() {
               />
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-gray-600)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <Facebook size={13} color="#1877F2" /> Applicant's Facebook PSID (optional)
-              </label>
-              <input
-                value={facebookPsid}
-                onChange={(e) => setFacebookPsid(e.target.value)}
-                placeholder="e.g. 1234567890987654"
-                style={{
-                  width: '100%', padding: '10px 12px',
-                  border: '1px solid var(--color-gray-200)', borderRadius: '8px',
-                  fontSize: '14px', outline: 'none', color: 'var(--color-gray-700)',
-                }}
-              />
-              <p style={{ fontSize: '12px', color: 'var(--color-gray-400)', marginTop: '4px' }}>
-                The PSID is obtained when the user messages your Facebook Page. Leave blank to skip FB notification.
-              </p>
-            </div>
-
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => { setShowRejectDocsModal(false); setRejectReason(''); }}
                 style={{ padding: '10px 18px', borderRadius: '8px', border: '1px solid var(--color-gray-200)', background: 'white', cursor: 'pointer', fontSize: '14px', color: 'var(--color-gray-600)' }}>
@@ -625,7 +602,7 @@ export default function ApplicationReviewPage() {
                   opacity: !rejectReason.trim() || actionLoading ? 0.6 : 1,
                 }}
               >
-                {facebookPsid ? 'Reject & Notify via FB' : 'Reject Documents'}
+                Reject Documents
               </button>
             </div>
           </div>

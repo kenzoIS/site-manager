@@ -16,11 +16,6 @@ export class UpdateStatusDto {
   @IsOptional()
   @IsString()
   reason?: string;
-
-  /** Facebook PSID of the applicant (used for Messenger notification on rejection) */
-  @IsOptional()
-  @IsString()
-  facebook_psid?: string;
 }
 
 export class FilterApplicationsDto {
@@ -44,9 +39,4 @@ export class FilterApplicationsDto {
 export class RejectDocumentsDto {
   @IsString()
   reason: string;
-
-  /** Facebook PSID of the applicant to notify via Messenger */
-  @IsOptional()
-  @IsString()
-  facebook_psid?: string;
 }

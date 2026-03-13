@@ -89,7 +89,7 @@ Runs at `http://localhost:3000`
 
 - **Donor Applicant List** — Browse and search donor profiles
 - **Volunteer Application Queue** — Filter by role/status, review uploaded documents
-- **Document Review Workflow** — Approve or reject documents with Facebook Messenger notifications
+- **Document Review Workflow** — Approve or reject uploaded documents
 - **Donation Inventory** — View donations grouped by campaign
 - **Activate Mission** — Deploy approved volunteers to an operation
 - **Real-time Volunteer Summary** — Live deployment stats and team breakdown

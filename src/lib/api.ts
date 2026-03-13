@@ -57,10 +57,10 @@ export const VolunteerApplicationsAPI = {
 
   get: (id: string) => request<any>(`/volunteer-applications/${id}`),
 
-  rejectDocuments: (id: string, reason: string, facebook_psid?: string) =>
+  rejectDocuments: (id: string, reason: string) =>
     request<any>(`/volunteer-applications/${id}/reject-documents`, {
       method: 'PATCH',
-      body: JSON.stringify({ reason, facebook_psid }),
+      body: JSON.stringify({ reason }),
     }),
 
   approveDocuments: (id: string) =>

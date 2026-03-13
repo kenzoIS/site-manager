@@ -9,32 +9,65 @@ import {
   Radio, 
   Clock,
   Target,
-  HeartPulse,
-  Truck,
   ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { MissionsAPI } from '@/lib/api';
+import { MissionsAPI, CampaignsAPI, VolunteerRolesAPI } from '@/lib/api';
 
 export default function ActivateMissionPage() {
-  const [missionType, setMissionType] = useState('medic');
   const [urgencyLevel, setUrgencyLevel] = useState('high');
   const [summaryData, setSummaryData] = useState<any>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState('');
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [volunteersNeeded, setVolunteersNeeded] = useState(8);
+  const [missionNotes, setMissionNotes] = useState('');
+  const [activating, setActivating] = useState(false);
+  const [activateResult, setActivateResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     MissionsAPI.volunteerSummary()
       .then((data: any) => setSummaryData(data))
       .catch(() => {});
+    CampaignsAPI.list({ status: 'active' })
+      .then((data) => setCampaigns(data))
+      .catch(() => {});
   }, []);
 
-  // Updated to just 3 roles: Medic, Logistics, Field
-  const missionTypes = [
-    { id: 'medic', label: 'Medic Role', icon: <HeartPulse size={18} />, description: 'Medical support, triage, and emergency care' },
-    { id: 'logistics', label: 'Logistics Role', icon: <Truck size={18} />, description: 'Supply delivery, transport, and coordination' },
-    { id: 'field', label: 'Field Role', icon: <Target size={18} />, description: 'Search, rescue, and field operations' },
-  ];
+  useEffect(() => {
+    if (!selectedCampaignId) { setRoles([]); setSelectedRoleId(''); return; }
+    VolunteerRolesAPI.list({ campaign_id: selectedCampaignId })
+      .then((data) => { setRoles(data); setSelectedRoleId(data[0]?.id ?? ''); })
+      .catch(() => {});
+  }, [selectedCampaignId]);
+
+  const handleActivate = async () => {
+    if (!selectedCampaignId || !selectedRoleId) {
+      setActivateResult({ success: false, message: 'Please select a campaign and role first.' });
+      return;
+    }
+    setActivating(true);
+    setActivateResult(null);
+    try {
+      const result = await MissionsAPI.activate({
+        campaign_id: selectedCampaignId,
+        role_id: selectedRoleId,
+        urgency: urgencyLevel,
+        notes: missionNotes || undefined,
+      });
+      setActivateResult({
+        success: true,
+        message: `Mission activated! ${result.deployments_created ?? 0} volunteer(s) deployed.`,
+      });
+    } catch (err: any) {
+      setActivateResult({ success: false, message: err.message ?? 'Failed to activate mission.' });
+    } finally {
+      setActivating(false);
+    }
+  };
 
   const urgencyOptions = [
     { id: 'critical', label: 'Critical', color: '#EF4444', bg: 'rgba(239, 68, 68, 0.1)' },
@@ -251,55 +284,77 @@ export default function ActivateMissionPage() {
                 Select Mission Role
               </h3>
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: '16px'
-              }}>
-                {missionTypes.map((type) => (
-                  <button
-                    key={type.id}
-                    onClick={() => setMissionType(type.id)}
-                    style={{
-                      padding: '24px 16px',
-                      backgroundColor: missionType === type.id ? 'rgba(92, 110, 213, 0.1)' : '#F9FAFB',
-                      border: missionType === type.id ? '2px solid #5C6ED5' : '1px solid #E5E7EB',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '12px',
-                      color: missionType === type.id ? '#5C6ED5' : '#374151'
-                    }}>
-                      <div style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '48px',
-                        backgroundColor: missionType === type.id ? 'rgba(92, 110, 213, 0.2)' : 'rgba(107, 114, 128, 0.1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {type.icon}
-                      </div>
-                      <span style={{ fontWeight: 600, fontSize: '16px' }}>{type.label}</span>
-                      <span style={{
-                        fontSize: '12px',
-                        color: missionType === type.id ? '#5C6ED5' : '#6B7280',
-                        lineHeight: 1.4
-                      }}>
-                        {type.description}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+              {/* Campaign Selector */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, color: '#374151', marginBottom: '8px' }}>
+                  Campaign
+                </label>
+                <select
+                  value={selectedCampaignId}
+                  onChange={(e) => setSelectedCampaignId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '10px',
+                    fontSize: '15px',
+                    color: selectedCampaignId ? '#111827' : '#9CA3AF',
+                    outline: 'none',
+                    backgroundColor: '#F9FAFB',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Select an active campaign...</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </select>
               </div>
+
+              {/* Role Selector */}
+              {!selectedCampaignId && (
+                <p style={{ fontSize: '14px', color: '#9CA3AF', textAlign: 'center', padding: '16px 0', margin: 0 }}>
+                  Select a campaign above to see available roles.
+                </p>
+              )}
+              {selectedCampaignId && roles.length === 0 && (
+                <p style={{ fontSize: '14px', color: '#9CA3AF', textAlign: 'center', padding: '16px 0', margin: 0 }}>
+                  No roles found for this campaign.
+                </p>
+              )}
+              {selectedCampaignId && roles.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  {roles.map((role) => (
+                    <button
+                      key={role.id}
+                      onClick={() => setSelectedRoleId(role.id)}
+                      style={{
+                        padding: '20px 12px',
+                        backgroundColor: selectedRoleId === role.id ? 'rgba(92, 110, 213, 0.1)' : '#F9FAFB',
+                        border: selectedRoleId === role.id ? '2px solid #5C6ED5' : '1px solid #E5E7EB',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: selectedRoleId === role.id ? '#5C6ED5' : '#374151' }}>
+                        <div style={{
+                          width: '40px', height: '40px', borderRadius: '40px',
+                          backgroundColor: selectedRoleId === role.id ? 'rgba(92,110,213,0.2)' : 'rgba(107,114,128,0.1)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Target size={18} />
+                        </div>
+                        <span style={{ fontWeight: 600, fontSize: '14px', lineHeight: 1.3 }}>{role.title}</span>
+                        <span style={{ fontSize: '11px', color: selectedRoleId === role.id ? '#5C6ED5' : '#9CA3AF' }}>
+                          {role.slots_filled ?? 0}/{role.slots_total ?? '?'} filled
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Mission Details Form */}
@@ -421,6 +476,8 @@ export default function ActivateMissionPage() {
                   <textarea
                     placeholder="Describe the mission objectives and requirements..."
                     rows={4}
+                    value={missionNotes}
+                    onChange={(e) => setMissionNotes(e.target.value)}
                     style={{
                       width: '100%',
                       padding: '14px 16px',
@@ -585,20 +642,22 @@ export default function ActivateMissionPage() {
                     marginBottom: '10px'
                   }}>
                     <span style={{ fontSize: '14px', color: '#6B7280' }}>Volunteers Needed</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>8</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{volunteersNeeded}</span>
                   </div>
                   <input
                     type="range"
                     min="1"
                     max="20"
-                    defaultValue="8"
+                    value={volunteersNeeded}
+                    onChange={(e) => setVolunteersNeeded(Number(e.target.value))}
                     style={{
                       width: '100%',
                       height: '6px',
                       borderRadius: '3px',
-                      background: 'linear-gradient(90deg, #5C6ED5 40%, #E5E7EB 40%)',
+                      background: `linear-gradient(90deg, #5C6ED5 ${((volunteersNeeded - 1) / 19) * 100}%, #E5E7EB ${((volunteersNeeded - 1) / 19) * 100}%)`,
                       WebkitAppearance: 'none',
-                      outline: 'none'
+                      outline: 'none',
+                      cursor: 'pointer',
                     }}
                   />
                   <div style={{
@@ -705,24 +764,42 @@ export default function ActivateMissionPage() {
 
             {/* Action Buttons */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button style={{
-                backgroundColor: '#5C6ED5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '40px',
-                padding: '18px',
-                fontSize: '17px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 12px rgba(92, 110, 213, 0.3)',
-                transition: 'all 0.2s'
-              }}>
+              {activateResult && (
+                <div style={{
+                  padding: '14px 18px',
+                  borderRadius: '12px',
+                  backgroundColor: activateResult.success ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                  border: `1px solid ${activateResult.success ? '#10B981' : '#EF4444'}`,
+                  color: activateResult.success ? '#0B7B4A' : '#B91C1C',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}>
+                  {activateResult.message}
+                </div>
+              )}
+              <button
+                onClick={handleActivate}
+                disabled={activating}
+                style={{
+                  backgroundColor: activating ? '#9CA3AF' : '#5C6ED5',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '40px',
+                  padding: '18px',
+                  fontSize: '17px',
+                  fontWeight: 600,
+                  cursor: activating ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: activating ? 'none' : '0 4px 12px rgba(92, 110, 213, 0.3)',
+                  transition: 'all 0.2s',
+                  opacity: activating ? 0.7 : 1,
+                }}
+              >
                 <Play size={20} />
-                Activate Mission
+                {activating ? 'Activating...' : 'Activate Mission'}
               </button>
               
               <Link href="/" style={{ textDecoration: 'none' }}>

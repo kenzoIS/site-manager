@@ -137,7 +137,7 @@ export default function VolunteerSummaryPage() {
       
       return matchesSearch && matchesTeam && matchesStatus;
     });
-  }, [searchTerm, selectedTeams, selectedStatuses]);
+  }, [volunteers, searchTerm, selectedTeams, selectedStatuses]);
 
   // Toggle team selection
   const toggleTeam = (team: string) => {
@@ -1221,7 +1221,15 @@ export default function VolunteerSummaryPage() {
               color: '#6B7280',
               fontSize: '14px'
             }}>
-              No volunteers found matching your criteria
+              {loading
+                ? 'Loading volunteers…'
+                : apiError
+                ? apiError
+                : (searchTerm || selectedTeams.length > 0 || selectedStatuses.length > 0)
+                ? 'No volunteers found matching your criteria'
+                : volunteers.length === 0
+                ? 'No approved volunteers yet.'
+                : 'No volunteers to display.'}
             </div>
           )}
         </div>

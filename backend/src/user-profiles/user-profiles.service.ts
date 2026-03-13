@@ -25,22 +25,29 @@ export class UserProfilesService {
 
   /** Get donor list — users who have made at least one donation */
   async getDonors() {
-    const { data, error } = await this.db
+    // Step 1: get all donations
+    const { data: donations, error: dErr } = await this.db
       .from('donations')
-      .select(
-        `
-        donor_auth_id,
-        user_profiles!donations_donor_auth_id_fkey(
-          id, first_name, last_name, phone, barangay, municipality, province,
-          profile_photo_key, role, created_at
-        ),
-        amount, currency, payment_method, donated_at, status
-      `,
-      )
+      .select('donor_auth_id, amount, currency, payment_method, donated_at, status')
       .order('donated_at', { ascending: false });
+    if (dErr) throw new BadRequestException(dErr.message);
 
-    if (error) throw new BadRequestException(error.message);
-    return data ?? [];
+    const items = donations ?? [];
+    if (items.length === 0) return [];
+
+    // Step 2: fetch profiles for each unique donor
+    const authIds = [...new Set(items.map((d) => d.donor_auth_id).filter(Boolean))];
+    const { data: profiles, error: pErr } = await this.db
+      .from('user_profiles')
+      .select('id, auth_user_id, first_name, last_name, phone, barangay, municipality, province, profile_photo_key, role, created_at')
+      .in('auth_user_id', authIds);
+    if (pErr) throw new BadRequestException(pErr.message);
+
+    const profileMap = new Map((profiles ?? []).map((p) => [p.auth_user_id, p]));
+    return items.map((d) => ({
+      ...d,
+      user_profiles: profileMap.get(d.donor_auth_id) ?? null,
+    }));
   }
 
   async findOne(id: string) {
