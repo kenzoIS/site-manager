@@ -10,9 +10,6 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const supabase_module_1 = require("./supabase/supabase.module");
-const user_profiles_module_1 = require("./user-profiles/user-profiles.module");
-const volunteer_applications_module_1 = require("./volunteer-applications/volunteer-applications.module");
-const donations_module_1 = require("./donations/donations.module");
 const campaigns_module_1 = require("./campaigns/campaigns.module");
 const volunteer_roles_module_1 = require("./volunteer-roles/volunteer-roles.module");
 const missions_module_1 = require("./missions/missions.module");
@@ -27,9 +24,6 @@ exports.AppModule = AppModule = __decorate([
                 envFilePath: '.env',
             }),
             supabase_module_1.SupabaseModule,
-            user_profiles_module_1.UserProfilesModule,
-            volunteer_applications_module_1.VolunteerApplicationsModule,
-            donations_module_1.DonationsModule,
             campaigns_module_1.CampaignsModule,
             volunteer_roles_module_1.VolunteerRolesModule,
             missions_module_1.MissionsModule,

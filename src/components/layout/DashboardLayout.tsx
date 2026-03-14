@@ -3,8 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bell, User, LayoutDashboard, Users, ClipboardList,
-  Heart, Package, Play, Activity,
+  Bell, User, LayoutDashboard,
+  Play, Activity,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -13,9 +13,6 @@ interface DashboardLayoutProps {
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/donor-applicants', label: 'Donors', icon: Heart },
-  { href: '/volunteer-applications', label: 'Applications', icon: ClipboardList },
-  { href: '/donation-inventory', label: 'Inventory', icon: Package },
   { href: '/activate-mission', label: 'Activate Mission', icon: Play },
   { href: '/volunteer-summary', label: 'Volunteer Summary', icon: Activity },
 ];
