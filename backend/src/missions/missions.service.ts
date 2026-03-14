@@ -61,7 +61,7 @@ export class MissionsService {
         .eq('campaign_id', campaignId);
       roleIdFilter = (roles ?? []).map((r) => r.id);
       if (roleIdFilter.length === 0) {
-        return { summary: { total: 0, active: 0, completed: 0 }, by_role: {}, deployments: [] };
+        return { summary: { total: 0, active: 0, on_mission: 0, completed: 0 }, by_role: {}, deployments: [] };
       }
     }
 
@@ -78,24 +78,36 @@ export class MissionsService {
     const apps = applications ?? [];
 
     if (apps.length === 0) {
-      return { summary: { total: 0, active: 0, completed: 0 }, by_role: {}, deployments: [] };
+      return { summary: { total: 0, active: 0, on_mission: 0, completed: 0 }, by_role: {}, deployments: [] };
     }
 
     // Check volunteer_deployments to know who is actively deployed vs standby
     const appIds = apps.map((a) => a.id);
     const { data: deployments } = await this.db
       .from('volunteer_deployments')
-      .select('application_id, status')
+      .select('application_id, status, date_assigned')
       .in('application_id', appIds);
-    const deployedMap = new Map((deployments ?? []).map((d) => [d.application_id, d.status]));
 
-    // Fetch profiles and roles in parallel
+    // Build map with priority: active > assigned > completed > (anything else)
+    // so that a volunteer with multiple deployments is never demoted by a later row
+    const STATUS_PRIORITY: Record<string, number> = { active: 3, assigned: 2, completed: 1 };
+    const deployedMap = new Map<string, { status: string; date_assigned: string | null }>();
+    for (const d of deployments ?? []) {
+      const existing = deployedMap.get(d.application_id);
+      const newPriority = STATUS_PRIORITY[d.status] ?? 0;
+      const oldPriority = existing ? (STATUS_PRIORITY[existing.status] ?? 0) : -1;
+      if (newPriority > oldPriority) {
+        deployedMap.set(d.application_id, { status: d.status, date_assigned: d.date_assigned ?? null });
+      }
+    }
+
+    // Fetch profiles (volunteers only) and roles in parallel
     const authIds = [...new Set(apps.map((a) => a.volunteer_auth_id).filter(Boolean))];
     const roleIds = [...new Set(apps.map((a) => a.role_id).filter(Boolean))];
 
     const [profilesRes, rolesRes] = await Promise.all([
       authIds.length
-        ? this.db.from('user_profiles').select('id, auth_user_id, first_name, last_name, profile_photo_key, barangay, municipality').in('auth_user_id', authIds)
+        ? this.db.from('user_profiles').select('id, auth_user_id, first_name, last_name, profile_photo_key, barangay, municipality').in('auth_user_id', authIds).eq('role', 'volunteer')
         : Promise.resolve({ data: [] as any[], error: null }),
       roleIds.length
         ? this.db.from('volunteer_roles').select('id, title, location').in('id', roleIds)
@@ -105,18 +117,26 @@ export class MissionsService {
     if (rolesRes.error) throw new BadRequestException(rolesRes.error.message);
 
     const profileMap = new Map((profilesRes.data ?? []).map((p) => [p.auth_user_id, p]));
+
+    // Only count applications that belong to actual volunteers
+    const volunteerAuthIds = new Set(profileMap.keys());
+    const volunteerApps = apps.filter((a) => volunteerAuthIds.has(a.volunteer_auth_id));
     const roleMap = new Map((rolesRes.data ?? []).map((r) => [r.id, r]));
 
     let active = 0;
+    let on_mission = 0;
     let completed = 0;
     const byRole: Record<string, number> = {};
 
-    const enriched = apps.map((app) => {
-      const deployStatus = deployedMap.get(app.id);
+    const enriched = volunteerApps.map((app) => {
+      const deployment = deployedMap.get(app.id);
+      const deployStatus = deployment?.status;
       const status = deployStatus === 'active' ? 'active'
+        : deployStatus === 'assigned' ? 'assigned'
         : deployStatus === 'completed' ? 'completed'
         : 'standby';
       if (status === 'active') active++;
+      if (status === 'assigned') on_mission++;
       if (status === 'completed') completed++;
 
       const role = roleMap.get(app.role_id) as any;
@@ -127,7 +147,7 @@ export class MissionsService {
         id: app.id,
         status,
         application_id: app.id,
-        date_assigned: null,
+        date_assigned: deployment?.date_assigned ?? app.applied_at ?? null,
         task_description: role?.title ?? 'Assigned',
         damayan_operation_id: null,
         volunteer_applications: {
@@ -138,6 +158,6 @@ export class MissionsService {
       };
     });
 
-    return { summary: { total: apps.length, active, completed }, by_role: byRole, deployments: enriched };
+    return { summary: { total: volunteerApps.length, active, on_mission, completed }, by_role: byRole, deployments: enriched };
   }
 }

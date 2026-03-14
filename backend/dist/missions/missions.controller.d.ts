@@ -19,6 +19,7 @@ export declare class MissionsController {
         summary: {
             total: number;
             active: number;
+            on_mission: number;
             completed: number;
         };
         by_role: Record<string, number>;

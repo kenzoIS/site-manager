@@ -29,7 +29,7 @@ export default function Home() {
   }, []);
 
   const standby = summaryData
-    ? Math.max(0, summaryData.summary.total - summaryData.summary.active - summaryData.summary.completed)
+    ? Math.max(0, summaryData.summary.total - summaryData.summary.active - summaryData.summary.on_mission - summaryData.summary.completed)
     : null;
 
   const recentActivity: { name: string; action: string; time: string }[] =
@@ -37,9 +37,14 @@ export default function Home() {
       const app = d.volunteer_applications ?? {};
       const profile = app.user_profiles ?? {};
       const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'Unknown';
-      const ms = Date.now() - new Date(d.date_assigned).getTime();
-      const mins = Math.floor(ms / 60000);
-      const timeStr = mins < 60 ? `${mins} min ago` : `${Math.floor(mins / 60)}h ago`;
+      const rawDate = d.date_assigned;
+      const timeStr = rawDate
+        ? (() => {
+            const ms = Date.now() - new Date(rawDate).getTime();
+            const mins = Math.floor(ms / 60000);
+            return mins < 60 ? `${mins} min ago` : `${Math.floor(mins / 60)}h ago`;
+          })()
+        : 'recently';
       return { name, action: d.task_description ?? 'Deployed to mission', time: timeStr };
     });
 
@@ -401,7 +406,7 @@ export default function Home() {
                   lineHeight: 1,
                   letterSpacing: '-0.02em'
                 }}>
-                  {summaryData?.summary.active ?? '—'}
+                  {summaryData?.summary.on_mission ?? '—'}
                 </div>
               </div>
             </div>
